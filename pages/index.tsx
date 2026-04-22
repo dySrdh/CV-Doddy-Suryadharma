@@ -20,6 +20,11 @@ export default function CVPage({ profile, education, work, org, skills }: Props)
     setDownloading(true)
 
     try {
+      // Pastikan semua font sudah ter-load sebelum snapshot canvas
+      if (typeof document !== 'undefined' && (document as any).fonts?.ready) {
+        await (document as any).fonts.ready
+      }
+
       // Dynamically import html2pdf (client-side only)
       const html2pdf = (await import('html2pdf.js')).default
 
@@ -168,7 +173,9 @@ export default function CVPage({ profile, education, work, org, skills }: Props)
                   {edu.focus && <p className="entry__focus">Focus: {edu.focus}</p>}
                   {edu.coursework && edu.coursework.length > 0 && (
                     <ul className="entry__list">
-                      {edu.coursework.map((c, i) => <li key={i}>{c}</li>)}
+                      {edu.coursework.map((c, i) => (
+                        <li key={i}><span className="bullet" /><span>{c}</span></li>
+                      ))}
                     </ul>
                   )}
                 </div>
@@ -189,7 +196,9 @@ export default function CVPage({ profile, education, work, org, skills }: Props)
                   <div className="entry__sub">{job.role}</div>
                   {job.description_items && job.description_items.length > 0 && (
                     <ul className="entry__list">
-                      {job.description_items.map((item, i) => <li key={i}>{item}</li>)}
+                      {job.description_items.map((item, i) => (
+                        <li key={i}><span className="bullet" /><span>{item}</span></li>
+                      ))}
                     </ul>
                   )}
                 </div>
@@ -210,7 +219,9 @@ export default function CVPage({ profile, education, work, org, skills }: Props)
                   <div className="entry__sub">{o.role}</div>
                   {o.description_items && o.description_items.length > 0 && (
                     <ul className="entry__list">
-                      {o.description_items.map((item, i) => <li key={i}>{item}</li>)}
+                      {o.description_items.map((item, i) => (
+                        <li key={i}><span className="bullet" /><span>{item}</span></li>
+                      ))}
                     </ul>
                   )}
                 </div>
@@ -447,14 +458,29 @@ export default function CVPage({ profile, education, work, org, skills }: Props)
           line-height: 1.45;
         }
         .entry__list {
-          padding-left: 14px;
+          list-style: none;
+          padding-left: 0;
           margin-top: 3px;
         }
         .entry__list li {
+          display: flex;
+          align-items: flex-start;
+          gap: 6px;
           font-size: 9.5pt;
           color: var(--mid);
           margin-bottom: 2px;
           line-height: 1.5;
+        }
+        .entry__list li .bullet {
+          flex-shrink: 0;
+          display: inline-block;
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background: var(--mid);
+          margin-top: 7px;
+          margin-left: 4px;
+          margin-right: 4px;
         }
 
         /* ── Skills ── */
