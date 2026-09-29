@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import { GetServerSideProps } from 'next'
 import { useRef, useState } from 'react'
-import { fetchCVData, Profile, Education, WorkExperience, OrgExperience, Skill } from '../lib/supabase'
+import { fetchCVData, Profile, Education, WorkExperience, OrgExperience, Skill } from '../lib/cvData'
 
 interface Props {
   profile: Profile
