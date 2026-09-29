@@ -1,7 +1,7 @@
 // CV data from Firebase Firestore (collection `cv`), shared with the portfolio (dysrdh.github.io).
-// Read-only over the public REST API — no SDK, no secrets. Edit the data in the Firebase Console.
+// Read-only over the public REST API (the Firestore rules allow public reads), so no SDK and no key.
+// Edit the data in the Firebase Console.
 const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'portfolio-1f4eb'
-const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyBSysQyC2EPhHQmN2OmLlYYoGspqNz06vs'
 
 // Types matching the documents in Firestore
 export interface Profile {
@@ -78,7 +78,7 @@ function fields(f: Record<string, any> = {}) {
 
 // Fetch all CV data
 export async function fetchCVData() {
-  const res = await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/cv?pageSize=100&key=${apiKey}`)
+  const res = await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/cv?pageSize=100`)
   if (!res.ok) throw new Error(`Firestore cv → ${res.status}`)
   const json = await res.json()
   const docs: Doc[] = (json.documents || []).map((d: any) => ({ id: d.name.split('/').pop(), ...fields(d.fields) }))
