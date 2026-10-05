@@ -13,7 +13,7 @@ interface Props {
 
 // ─────────────────────────────────────────────────────────────────
 // URL helpers — pastikan link selalu full URL (clickable di web,
-// dan tetap terbaca di PDF karena html2pdf merender ke canvas).
+// dan tetap bisa diklik di PDF hasil /api/pdf).
 // ─────────────────────────────────────────────────────────────────
 function normalizeLinkedIn(value: string): { href: string; display: string } {
   const v = (value || '').trim()
@@ -40,46 +40,13 @@ export default function CVPage({ profile, education, work, org, skills }: Props)
   const cvRef = useRef<HTMLDivElement>(null)
   const [downloading, setDownloading] = useState(false)
 
-  const handleDownloadPDF = async () => {
-    if (!cvRef.current) return
+  // The PDF is printed on the server by Chromium (/api/pdf): real, selectable text that job portals (ATS) can read,
+  // and the same A4 layout whether downloaded from a phone or a desktop.
+  const handleDownloadPDF = () => {
     setDownloading(true)
-
-    try {
-      if (typeof document !== 'undefined' && (document as any).fonts?.ready) {
-        await (document as any).fonts.ready
-      }
-
-      const html2pdf = (await import('html2pdf.js')).default
-      const element = cvRef.current
-
-      const opt = {
-        margin: [0, 0, 0, 0] as [number, number, number, number],
-        filename: `${profile.name.replace(/ /g, '_')}_CV.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          letterRendering: true,
-          logging: false,
-          windowWidth: element.scrollWidth,
-        },
-        jsPDF: {
-          unit: 'mm',
-          format: 'a4',
-          orientation: 'portrait',
-          compress: true,
-        },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-      }
-
-      await html2pdf().set(opt).from(element).save()
-    } catch (err) {
-      console.error('PDF error:', err)
-      alert('PDF gagal dibuat. Coba lagi.')
-    }
-
-    setDownloading(false)
+    // the server answers with Content-Disposition: attachment, so the browser saves it (iOS opens it in its PDF viewer)
+    window.location.href = '/api/pdf'
+    setTimeout(() => setDownloading(false), 6000)
   }
 
   const initials = profile?.name
@@ -93,6 +60,7 @@ export default function CVPage({ profile, education, work, org, skills }: Props)
     <>
       <Head>
         <title>{profile.name} — CV</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content={profile.summary?.slice(0, 160) || ''} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -149,7 +117,7 @@ export default function CVPage({ profile, education, work, org, skills }: Props)
                   </a>
                 )}
                 {profile.address && (
-                  <span className="ci">
+                  <span className="ci ci-block">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
                     <span>{profile.address}</span>
                   </span>
@@ -407,12 +375,13 @@ export default function CVPage({ profile, education, work, org, skills }: Props)
         a.ci:hover { color: var(--accent); }
         a.ci:hover svg { color: var(--accent); }
         /* separator dot between inline items */
-        .ci:not(.ci-block):not(:last-of-type)::after {
+        .ci:not(.ci-block) + .ci:not(.ci-block)::before {
           content: "•";
-          margin: 0 9px;
+          margin: 0 9px 0 0;
           color: var(--soft);
           font-size: 8pt;
         }
+        .ci:not(.ci-block) + .ci:not(.ci-block) { margin-left: 9px; }
         /* address / linkedin / portfolio = full row */
         .ci-block {
           display: flex;
@@ -599,22 +568,40 @@ export default function CVPage({ profile, education, work, org, skills }: Props)
 
         /* ── Print / PDF ── */
         @media print {
-          @page { size: A4; margin: 0; }
+          @page { size: A4; margin: 12mm 0 13mm; }
           .no-print { display: none !important; }
-          .outer { padding: 0; background: white; }
-          .cv { box-shadow: none; width: 100%; min-height: unset; padding: 14mm 16mm; border-radius: 0; }
-          body { background: white; }
+          .outer { padding: 0; background: white; display: block; }
+          .cv { box-shadow: none; width: 100%; min-height: unset; padding: 0 16mm; border-radius: 0; }
+          html, body { background: white !important; min-height: 0; }
+          .hdr { margin-bottom: 14px; padding-bottom: 12px; }
+          .sec { margin-bottom: 12px; }
+          .sec__title { margin-bottom: 8px; }
+          .summary_text { line-height: 1.55; }
+          .entry { margin-bottom: 9px; }
+          .entry__list li { line-height: 1.45; margin-bottom: 2px; }
+          .skills_container { gap: 6px; }
           a { color: inherit; text-decoration: none; }
+          .hdr, .entry__header, .entry__sub, .entry__focus, .entry__list li, .skill_row, .summary_text { break-inside: avoid; }
+          .sec__title, .entry__header, .entry__sub { break-after: avoid; }
         }
 
         @media (max-width: 680px) {
-          .cv { width: 100%; padding: 24px 18px; min-height: unset; }
-          .hdr { flex-direction: column-reverse; align-items: flex-start; }
-          .hdr__photo, .hdr__photo--init { width: 76px; height: 76px; min-width: 76px; min-height: 76px; }
+          .topbar__inner { padding: 0 16px; }
+          .outer { padding: 68px 12px 32px; }
+          .cv { width: 100%; max-width: 100%; padding: 22px 18px; min-height: unset; }
+          .hdr { flex-direction: column-reverse; align-items: flex-start; gap: 14px; }
+          .hdr__photo, .hdr__photo--init { width: 76px; height: 76px; min-width: 76px; min-height: 76px; max-width: 76px; max-height: 76px; }
           .hdr__name { font-size: 22pt; }
+          /* contacts: one per line, no dot separators */
+          .hdr__contacts { flex-direction: column; gap: 7px; font-size: 9.5pt; }
+          .ci, .ci-block { display: flex; flex-basis: auto; white-space: normal; overflow-wrap: anywhere; word-break: normal; margin-top: 0; }
+          .ci:not(.ci-block) + .ci:not(.ci-block)::before { content: none; }
+          .ci:not(.ci-block) + .ci:not(.ci-block) { margin-left: 0; }
+          .summary_text { text-align: left; }
           .skill_row { grid-template-columns: 1fr; gap: 4px; }
           .skill_label { padding-top: 0; }
           .entry__header { flex-direction: column; align-items: flex-start; gap: 3px; }
+          .entry__title { overflow-wrap: anywhere; }
         }
       `}</style>
     </>
